@@ -12,8 +12,9 @@ class ActionColumn extends \yii\grid\ActionColumn
 {
     public $layout = '{buttons}';
     public $buttonLayout = '<a href="{url}"{button-options}>{icon}</a>';
+    public $buttons = [];
 
-    public $buttons = [
+    public $defaultButtons = [
         'update' => [
             'partials' => [
                 'icon' => '<svg aria-hidden="true" style="display:inline-block;font-size:inherit;height:1em;overflow:visible;vertical-align:-.125em;width:1em" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M498 142l-46 46c-5 5-13 5-17 0L324 77c-5-5-5-12 0-17l46-46c19-19 49-19 68 0l60 60c19 19 19 49 0 68zm-214-42L22 362 0 484c-3 16 12 30 28 28l122-22 262-262c5-5 5-13 0-17L301 100c-4-5-12-5-17 0zM124 340c-5-6-5-14 0-20l154-154c6-5 14-5 20 0s5 14 0 20L144 340c-6 5-14 5-20 0zm-36 84h48v36l-64 12-32-31 12-65h36v48z"/></svg>'
@@ -36,8 +37,20 @@ class ActionColumn extends \yii\grid\ActionColumn
 
     public $urls = [];
 
+    /**
+     * @param $name
+     * @param $iconName
+     * @param $additionalOptions
+     * @return void
+     * @deprecated
+     */
+    public function initDefaultButton($name, $iconName, $additionalOptions = [])
+    {
+    }
+
     protected function initDefaultButtons()
     {
+        $this->buttons = ArrayHelper::merge($this->buttons, $this->defaultButtons);
         $this->buttons['delete']['options']['data-confirm'] = Yii::t('yii', 'Are you sure you want to delete this item?');
     }
 
@@ -52,6 +65,9 @@ class ActionColumn extends \yii\grid\ActionColumn
 
     public function createUrl($action, $model, $key, $index)
     {
+        if (isset($this->buttons[$action]['url'])) {
+            return Url::toRoute($this->buttons[$action]['url'] instanceof Closure ? call_user_func($this->buttons[$action]['url'], $model, $key, $index) : $this->buttons[$action]['url']);
+        }
         if (isset($this->urls[$action])) {
             return Url::toRoute($this->urls[$action] instanceof Closure ? call_user_func($this->urls[$action], $model, $key, $index) : $this->urls[$action]);
         }
@@ -60,27 +76,54 @@ class ActionColumn extends \yii\grid\ActionColumn
 
     public function getButtonLabel($name)
     {
-        return ArrayHelper::getValue($this->buttonLabels(), $name, $name);
+        return ArrayHelper::getValue($this->buttons, $name . '.label', ArrayHelper::getValue($this->buttonLabels(), $name));
+    }
+
+    public function getButtonPartials($name)
+    {
+        return ArrayHelper::getValue($this->buttons, $name . '.partials', []);
+    }
+
+    public function getDefaultButtonOptions($name)
+    {
+        $label = $this->getButtonLabel($name);
+        return ['title' => $label, 'aria-label' => $label, 'data-pjax' => '0'];
+    }
+
+    public function getButtonOptions($name, $defaultButtonOptions)
+    {
+        return array_merge($defaultButtonOptions, ArrayHelper::getValue($this->buttons, $name . '.options', []), $this->buttonOptions);
+    }
+
+    public function getReplaceButtonPatterns($name, $model, $key, $index)
+    {
+        $url = $this->createUrl($name, $model, $key, $index);
+        $label = $this->getButtonLabel($name);
+        $defaultButtonOptions = $this->getDefaultButtonOptions($name);
+        $buttonOptions = $this->getButtonOptions($name, $defaultButtonOptions);
+        $buttonPartials = $this->getButtonPartials($name);
+
+        $defaultPatterns = [
+            'url' => $url,
+            'label' => $label,
+            'button-options' => Html::renderTagAttributes($buttonOptions)
+        ];
+
+        return array_merge($defaultPatterns, $buttonPartials);
     }
 
     public function renderButton($name, $model, $key, $index)
     {
         $url = $this->createUrl($name, $model, $key, $index);
-        $buttonPartials = ArrayHelper::getValue($this->buttons, $name . '.partials', []);
+
         $label = $this->getButtonLabel($name);
 
-        $defaultButtonOptions = ['title' => $label, 'aria-label' => $label, 'data-pjax' => '0',];
-        $buttonOptions = array_merge($defaultButtonOptions, ArrayHelper::getValue($this->buttons, $name . '.options', []), $this->buttonOptions);
-
-        $replacePatterns = array_merge([
-            'url' => $url,
-            'label' => $this->getButtonLabel($name),
-            'button-options' => Html::renderTagAttributes($buttonOptions)
-        ], $buttonPartials);
+        $replacePatterns = $this->getReplaceButtonPatterns($name, $model, $key, $index);
 
         return preg_replace_callback('/\\{([\w\-\/]+)\\}/', function ($matches) use ($model, $key, $index, $replacePatterns) {
             $name = $matches[1];
-            return ArrayHelper::getValue($replacePatterns, $name, '');
+            $value = ArrayHelper::getValue($replacePatterns, $name, '');
+            return $value instanceof Closure ? call_user_func($value, $model, $key, $index) : $value;
         }, $this->buttonLayout);
     }
 
