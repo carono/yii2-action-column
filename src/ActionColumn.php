@@ -1,6 +1,6 @@
 <?php
 
-namespace carono\yii2widgets\src;
+namespace carono\yii2widgets;
 
 use Closure;
 use Yii;
@@ -70,7 +70,7 @@ class ActionColumn extends \yii\grid\ActionColumn
         $label = $this->getButtonLabel($name);
 
         $defaultButtonOptions = ['title' => $label, 'aria-label' => $label, 'data-pjax' => '0',];
-        $buttonOptions = array_merge($defaultButtonOptions, ArrayHelper::getValue($this->buttons, $name . '.options'), $this->buttonOptions);
+        $buttonOptions = array_merge($defaultButtonOptions, ArrayHelper::getValue($this->buttons, $name . '.options', []), $this->buttonOptions);
 
         $replacePatterns = array_merge([
             'url' => $url,

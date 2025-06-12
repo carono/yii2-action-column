@@ -19,7 +19,7 @@
   },
   "autoload": {
     "psr-4": {
-      "carono\\yii2widgets\\": ""
+      "carono\\yii2widgets\\": "src"
     }
   },
   "repositories": [
