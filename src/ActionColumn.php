@@ -66,10 +66,16 @@ class ActionColumn extends \yii\grid\ActionColumn
     public function createUrl($action, $model, $key, $index)
     {
         if (isset($this->buttons[$action]['url'])) {
-            return Url::toRoute($this->buttons[$action]['url'] instanceof Closure ? call_user_func($this->buttons[$action]['url'], $model, $key, $index) : $this->buttons[$action]['url']);
+            $value = $this->buttons[$action]['url'];
+            return Url::toRoute($value instanceof Closure ? call_user_func($value, $model, $key, $index) : $value);
         }
         if (isset($this->urls[$action])) {
-            return Url::toRoute($this->urls[$action] instanceof Closure ? call_user_func($this->urls[$action], $model, $key, $index) : $this->urls[$action]);
+            $value = $this->urls[$action];
+            return Url::toRoute($value instanceof Closure ? call_user_func($value, $model, $key, $index) : $value);
+        }
+        if (isset($this->buttons[$action]['baseUrl'])) {
+            $value = $this->buttons[$action]['baseUrl'];
+            $action = Url::toRoute($value instanceof Closure ? call_user_func($value, $model, $key, $index) : $value);
         }
         return parent::createUrl($action, $model, $key, $index);
     }
