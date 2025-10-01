@@ -13,6 +13,7 @@ class ActionColumn extends \yii\grid\ActionColumn
     public $layout = '{buttons}';
     public $buttonLayout = '<a href="{url}"{button-options}>{icon}</a>';
     public $buttons = [];
+    public $baseUrl;
 
     public $defaultButtons = [
         'update' => [
@@ -50,7 +51,7 @@ class ActionColumn extends \yii\grid\ActionColumn
 
     protected function initDefaultButtons()
     {
-        $this->buttons = ArrayHelper::merge($this->buttons, $this->defaultButtons);
+        $this->buttons = ArrayHelper::merge($this->defaultButtons, $this->buttons);
         $this->buttons['delete']['options']['data-confirm'] = Yii::t('yii', 'Are you sure you want to delete this item?');
     }
 
