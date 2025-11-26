@@ -68,10 +68,16 @@ class ActionColumn extends \yii\grid\ActionColumn
     {
         if (isset($this->buttons[$action]['url'])) {
             $value = $this->buttons[$action]['url'];
+            if ($value == '#') {
+                return $value;
+            }
             return Url::toRoute($value instanceof Closure ? call_user_func($value, $model, $key, $index) : $value);
         }
         if (isset($this->urls[$action])) {
             $value = $this->urls[$action];
+            if ($value == '#') {
+                return $value;
+            }
             return Url::toRoute($value instanceof Closure ? call_user_func($value, $model, $key, $index) : $value);
         }
         if (isset($this->buttons[$action]['baseUrl'])) {
