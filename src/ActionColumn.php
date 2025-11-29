@@ -13,6 +13,7 @@ class ActionColumn extends \yii\grid\ActionColumn
     public $layout = '{buttons}';
     public $buttonLayout = '<a href="{url}"{button-options}>{icon}</a>';
     public $buttons = [];
+    public $buttonLayouts = [];
     public $baseUrl;
 
     public $defaultButtons = [
@@ -87,34 +88,41 @@ class ActionColumn extends \yii\grid\ActionColumn
         return parent::createUrl($action, $model, $key, $index);
     }
 
-    public function getButtonLabel($name)
+    public function getButtonLabel($name, $model, $key, $index)
     {
-        return ArrayHelper::getValue($this->buttons, $name . '.label', ArrayHelper::getValue($this->buttonLabels(), $name));
+        $buttonLabel = $this->buttons[$name]['label'] ?? null;
+        $defaultLabels = $this->buttonLabels()[$name] ?? null;
+
+        return $this->renderOptionValue($name, $model, $key, $index, $buttonLabel, $defaultLabels);
     }
 
-    public function getButtonPartials($name)
+    public function getButtonPartials($name, $model, $key, $index)
     {
-        return ArrayHelper::getValue($this->buttons, $name . '.partials', []);
+        $buttonPartials = $this->buttons[$name]['partials'] ?? null;
+        $defaultPartials = [];
+
+        return $this->renderOptionValue($name, $model, $key, $index, $buttonPartials, $defaultPartials);
     }
 
-    public function getDefaultButtonOptions($name)
+    public function getDefaultButtonOptions($name, $model, $key, $index)
     {
-        $label = $this->getButtonLabel($name);
+        $label = $this->getButtonLabel($name, $model, $key, $index);
         return ['title' => $label, 'aria-label' => $label, 'data-pjax' => '0'];
     }
 
-    public function getButtonOptions($name, $defaultButtonOptions)
+    public function getButtonOptions($name, $model, $key, $index)
     {
-        return array_merge($defaultButtonOptions, ArrayHelper::getValue($this->buttons, $name . '.options', []), $this->buttonOptions);
+        $buttonOptions = $this->buttons[$name]['options'] ?? null;
+        return $this->renderOptionValue($name, $model, $key, $index, $buttonOptions, []);
     }
 
     public function getReplaceButtonPatterns($name, $model, $key, $index)
     {
         $url = $this->createUrl($name, $model, $key, $index);
-        $label = $this->getButtonLabel($name);
-        $defaultButtonOptions = $this->getDefaultButtonOptions($name);
-        $buttonOptions = $this->getButtonOptions($name, $defaultButtonOptions);
-        $buttonPartials = $this->getButtonPartials($name);
+        $label = $this->getButtonLabel($name, $model, $key, $index);
+        $defaultButtonOptions = $this->getDefaultButtonOptions($name, $model, $key, $index);
+        $buttonOptions = array_merge($defaultButtonOptions, $this->getButtonOptions($name, $model, $key, $index));
+        $buttonPartials = $this->getButtonPartials($name, $model, $key, $index);
 
         $defaultPatterns = [
             'url' => $url,
@@ -125,29 +133,49 @@ class ActionColumn extends \yii\grid\ActionColumn
         return array_merge($defaultPatterns, $buttonPartials);
     }
 
+    protected function renderOptionValue($name, $model, $key, $index, ...$values)
+    {
+        foreach ($values as $value) {
+            if (is_null($value)) {
+                continue;
+            }
+            if ($value instanceof Closure) {
+                return call_user_func($value, $model, $key, $index);
+            }
+            return $value;
+        }
+        return null;
+    }
+
+    public function getButtonLayout($name, $model, $key, $index)
+    {
+        $buttonLayout = $this->buttons[$name]['layout'] ?? null;
+        $personalLayout = $this->buttonLayouts[$name] ?? null;
+        $defaultLayout = $this->buttonLayout;
+
+        return $this->renderOptionValue($name, $model, $key, $index, $buttonLayout, $personalLayout, $defaultLayout);
+    }
+
     public function renderButton($name, $model, $key, $index)
     {
         $url = $this->createUrl($name, $model, $key, $index);
-
-        $label = $this->getButtonLabel($name);
-
+        $label = $this->getButtonLabel($name, $model, $key, $index);
         $replacePatterns = $this->getReplaceButtonPatterns($name, $model, $key, $index);
+        $layoyt = $this->getButtonLayout($name, $model, $key, $index);
 
         return preg_replace_callback('/\\{([\w\-\/]+)\\}/', function ($matches) use ($model, $key, $index, $replacePatterns) {
             $name = $matches[1];
             $value = ArrayHelper::getValue($replacePatterns, $name, '');
             return $value instanceof Closure ? call_user_func($value, $model, $key, $index) : $value;
-        }, $this->buttonLayout);
+        }, $layoyt);
     }
 
     protected function isVisible($name, $model, $key, $index)
     {
-        if (isset($this->visibleButtons[$name])) {
-            return $this->visibleButtons[$name] instanceof \Closure
-                ? call_user_func($this->visibleButtons[$name], $model, $key, $index)
-                : $this->visibleButtons[$name];
-        }
-        return true;
+        $defaultVisible = $this->visibleButtons[$name] ?? null;
+        $buttonVisible = $this->buttons[$name]['visible'] ?? null;
+
+        return $this->renderOptionValue($name, $model, $key, $index, $buttonVisible, $defaultVisible);
     }
 
     protected function renderDataCellContent($model, $key, $index)

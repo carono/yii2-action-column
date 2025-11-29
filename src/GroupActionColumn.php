@@ -44,9 +44,9 @@ HTML;
         ],
     ];
 
-    public function getButtonOptions($name, $defaultButtonOptions)
+    public function getButtonOptions($name, $model, $key, $index)
     {
-        $options = parent::getButtonOptions($name, $defaultButtonOptions);
+        $options = parent::getButtonOptions($name, $model, $key, $index);
         if (empty($options['class'])) {
             $options['class'] = 'btn btn-primary btn-sm';
         }
