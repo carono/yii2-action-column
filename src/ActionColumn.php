@@ -173,7 +173,7 @@ class ActionColumn extends \yii\grid\ActionColumn
     protected function isVisible($name, $model, $key, $index)
     {
         $defaultVisible = $this->visibleButtons[$name] ?? null;
-        $buttonVisible = $this->buttons[$name]['visible'] ?? null;
+        $buttonVisible = $this->buttons[$name]['visible'] ?? true;
 
         return $this->renderOptionValue($name, $model, $key, $index, $buttonVisible, $defaultVisible);
     }
